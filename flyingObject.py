@@ -1,9 +1,7 @@
-import tkinter as tk
-import re
 import uuid
 import time
-import random
 import math
+from utils import quadratic_bezier
 
 class FlyingObject:
     def __init__(self, canvas, x, y, speed, expire_time, payload):
@@ -17,35 +15,41 @@ class FlyingObject:
         self.payload = bytes.fromhex(payload)
         self.canvas = canvas
 
-        # Validate and set the angle
-        self._set_angle()
+    def _set_angle(self, dest_x, dest_y):
+        # Calculate angle based on direction vector towards the destination
+        dx = dest_x - self.x
+        dy = dest_y - self.y
 
-    def _set_angle(self):
-        # Calculate angle based on direction vector
-        if self.x == 0 and self.y == 0:
-            self.angle = 0
-        else:
-            self.angle = math.atan2(self.y, self.x)
+        # Calculate the angle in radians
+        self.angle = math.atan2(dy, dx)
 
-        # Convert negative angles to positive
-        if self.angle < 0:
-            self.angle += 2 * math.pi
+    def move(self, dest_x, dest_y, way_x, way_y, bezier_curve):
+        t = 0
+        while t <= 1:
+            # Calculate Bezier curve coordinates
+            x, y = quadratic_bezier(t, (bezier_curve[0], bezier_curve[1]),
+                                    (bezier_curve[2], bezier_curve[3]),
+                                    (bezier_curve[4], bezier_curve[5]))
 
-    def move(self):
-        # Move the object based on speed and angle
-        dx = self.speed * math.cos(self.angle)
-        dy = self.speed * math.sin(self.angle)
-        self.x += dx
-        self.y += dy
+            # Move the object on the canvas
+            self.canvas.coords(self.object_id, x - 5, y - 5, x + 5, y + 5)
 
-        # Move the object on the canvas
-        self.canvas.coords(self.object_id, self.x - 5, self.y - 5, self.x + 5, self.y + 5)
+            # Increment parameter t for the next point on the curve
+            t += 0.02  # Adjust the step size as needed
 
-        # Check expiration time
-        current_time = time.time()
-        if current_time - self.created_time >= self.expire_time:
-            # Delete the object from the canvas
-            self.canvas.delete(self.object_id)
-        else:
-            # Call this function again after a delay for continuous movement
-            self.canvas.after(50, self.move)
+            distance_to_waypoint = math.sqrt((self.x - way_x) ** 2 + (self.y - way_y) ** 2)
+            distance_to_destination = math.sqrt((self.x - dest_x) ** 2 + (self.y - dest_y) ** 2)
+
+            if distance_to_waypoint <= 5:
+                # Object has reached the waypoint, update angle for the next segment
+                self._set_angle(dest_x, dest_y)
+
+            if distance_to_destination <= 5:  # Adjust the threshold as needed
+                return  # Exit the function when the destination is reached
+
+            # Update the object's coordinates
+            self.x = x
+            self.y = y
+
+            # Delay for a short duration to control the rate of object movement
+            time.sleep(0.05)
