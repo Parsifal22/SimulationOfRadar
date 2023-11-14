@@ -95,13 +95,14 @@ def run_flying_object(window, canvas, start_timeframe, screen_width, screen_heig
 
 
 # Create a function to start the simulation
-def startSimulation(canvas, window, screen_width, screen_height, start_button):
+def startSimulation(canvas, window, screen_width, screen_height, start_button, setting_button, parameters):
     start_button['state'] = 'disabled'
+    setting_button['state'] = 'disabled'
 
     clear_json_file("data.json")
 
-    # Set the arbitrary start date and time (1st of December 2006 at 13:00)
-    start_timeframe = SimulationParameters(2006, 12, 1, 13, 0)
+    # Set the start date and time
+    parameters.start_timeframe
 
     # Generate flying objects randomly for 3 minutes
     end_time = time.time() + 60  # 1 minute
@@ -114,24 +115,32 @@ def startSimulation(canvas, window, screen_width, screen_height, start_button):
 
     elapsed_time = 0
     # Generate flying objects randomly for 3 minutes
-    end_time = time.time() + 60  # 1 minute
+    end_time = time.time() + parameters.simulation_duration  # 1 minute
 
-
-
+    # Set the number of threads to be created within a minute
+    threads_to_create = parameters.numbers_of_objects
+    threads_created = 0
+    print(threads_to_create)
+    print(parameters.simulation_duration)
     # Start updating the timer label
-    update_timer(timer_label, start_timeframe.simulation_start_time, 0, real_to_sim_time_ratio)
+    update_timer(timer_label, parameters.simulation_start_time, 0, real_to_sim_time_ratio)
 
     while time.time() < end_time:
 
         # Calculate the current simulation time
-        current_simulation_time = get_simulation_time(start_timeframe.simulation_start_time, elapsed_time)
+        current_simulation_time = get_simulation_time(parameters.simulation_start_time, elapsed_time)
 
-        # Create a thread for each FlyingObject
-        thread = threading.Thread(target=run_flying_object, args=(window, canvas, start_timeframe, screen_width, screen_height))
-        threads.append(thread)
+        # Randomly decide whether to create a thread or not
+        if threads_created < threads_to_create and random.choice([True, False, False]):
+            # Create a thread for each FlyingObject
+            thread = threading.Thread(target=run_flying_object, args=(window, canvas, parameters, screen_width, screen_height))
+            threads.append(thread)
 
-        # Start the thread
-        thread.start()
+            # Start the thread
+            thread.start()
+
+            # Increment the count of threads created
+            threads_created += 1
 
         # Increase elapsed time
         elapsed_time += 1
@@ -143,11 +152,11 @@ def startSimulation(canvas, window, screen_width, screen_height, start_button):
         # Sleep for a short duration to control the rate of object creation
         time.sleep(1)
 
-    # Wait for all threads to finish
-    for thread in threads:
-        thread.join()
+    # Clear the list of threads
+    threads.clear()
 
     # Destroy the timer label after simulation ends
     timer_label.destroy()
     # Enable the button after simulation ends
     start_button['state'] = 'normal'
+    setting_button['state'] = 'normal'

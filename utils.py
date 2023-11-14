@@ -31,12 +31,24 @@ def calculate_distance(x1, y1, x2, y2):
 
 
 class SimulationParameters:
-    def __init__(self, start_year, start_month, start_day, start_hour, start_minute):
-        self.simulation_start_time = datetime.datetime(start_year, start_month, start_day, start_hour, start_minute)
+    def __init__(self):
+        self.simulation_start_time = datetime.datetime(2006, 12, 1, 13, 0)
+        self.simulation_duration = 600  # 10 minutes
+        self.numbers_of_objects = 40  # 40 objects during simulation
         self.current_time = self.simulation_start_time
         self.stop_event = threading.Event()
         self.update_thread = threading.Thread(target=self._update_time, daemon=True)
         self.update_thread.start()
+
+    def start_timeframe(self):
+        self.update_thread.start()
+
+    def set_duration(self, value):
+        self.simulation_duration = value
+
+    def set_objects(self, value):
+        self.numbers_of_objects = value
+
     def _update_time(self):
         while not self.stop_event.is_set():
             time.sleep(1)  # Update time every second

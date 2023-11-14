@@ -1,7 +1,9 @@
 import tkinter as tk
 from start_simulation import startSimulation
 import threading
+from utils import SimulationParameters
 from open_settings import openSettings
+
 
 # Create the main window
 window = tk.Tk()
@@ -18,11 +20,24 @@ window.geometry(f"{screen_width}x{screen_height}")
 canvas = tk.Canvas(window, width=screen_width, height=screen_height, bg="white")
 canvas.pack(fill=tk.BOTH, expand=True)
 
+# Initsialize initial parameters
+parameters = SimulationParameters()
+
+# Create the "Settings" button
+settings_button = tk.Button(window, text="Settings", command=lambda: openSettings(window, parameters))
+settings_button.pack(side=tk.LEFT, padx=10)
+
 # Create the "Start simulation" button
 start_button = tk.Button(window, text="Start simulation",
                          command=lambda: threading.Thread(target=startSimulation,
-                                                          args=(canvas, window, screen_width, screen_height, start_button)).start())
+                                                          args=(canvas, window, screen_width, screen_height,
+                                                                start_button, settings_button, parameters)).start())
 start_button.pack(side=tk.LEFT, padx=10)
+
+
+
+# Place the "Settings" button next to the "Start simulation" button
+canvas.create_window(5, 70, anchor=tk.NW, window=settings_button, width=110, height=50)
 
 # Place the "Start simulation" button at the upper left corner
 canvas.create_window(5, 10, anchor=tk.NW, window=start_button, width=110, height=50)
