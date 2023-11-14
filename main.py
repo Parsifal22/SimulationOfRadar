@@ -21,11 +21,13 @@ canvas.pack(fill=tk.BOTH, expand=True)
 # Create the "Start simulation" button
 start_button = tk.Button(window, text="Start simulation",
                          command=lambda: threading.Thread(target=startSimulation,
-                                                          args=(canvas, screen_width, screen_height, start_button)).start())
+                                                          args=(canvas, window, screen_width, screen_height, start_button)).start())
 start_button.pack(side=tk.LEFT, padx=10)
 
 # Place the "Start simulation" button at the upper left corner
 canvas.create_window(5, 10, anchor=tk.NW, window=start_button, width=110, height=50)
+
+
 
 # Start the main event loop
 window.mainloop()
