@@ -52,14 +52,12 @@ if __name__ == '__main__':
     flask_process = Process(target=run_flask_app)
     flask_process.start()
 
-    # Run the Tkinter main event loop in the main thread
-    run_mainloop()
-
     try:
         # Run the Tkinter main event loop in the main thread
         run_mainloop()
     finally:
-        # Stop the Flask app gracefully when the Tkinter main event loop exits
         flask_process.terminate()
         flask_process.join()
+
+
 
