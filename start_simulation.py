@@ -36,7 +36,7 @@ def clear_json_file(file_path):
 # List to store thread instances
 threads = []
 # Function to run the simulation for a single FlyingObject
-def run_flying_object(window, canvas, start_timeframe, screen_width, screen_height):
+def run_flying_object(window, canvas, start_timeframe, screen_width, screen_height, start_threads):
 
 
     # Generate random coordinates for the initial point
@@ -50,7 +50,7 @@ def run_flying_object(window, canvas, start_timeframe, screen_width, screen_heig
     point = canvas.create_oval(x - 5, y - 5, x + 5, y + 5, fill="red", outline="red")
 
     flying_object = FlyingObject(
-        canvas, x, y, speed=random.uniform(10, 80),
+        canvas, x, y, speed=random.uniform(300, 400),
         time_frame=start_timeframe
     )
 
@@ -86,7 +86,7 @@ def run_flying_object(window, canvas, start_timeframe, screen_width, screen_heig
     bezier_curve = (x, y, way_x, way_y, dest_x, dest_y)
     canvas.create_line(bezier_curve, smooth="true", tags=flying_object.object_id)
 
-    flying_object.move(dest_x=dest_x, dest_y=dest_y, bezier_curve=bezier_curve)
+    flying_object.move(dest_x=dest_x, dest_y=dest_y, bezier_curve=bezier_curve, counter_json=start_threads)
 
     # Object has reached the destination, delete it from the canvas
     canvas.delete(flying_object.object_id)
@@ -101,6 +101,12 @@ def startSimulation(canvas, window, screen_width, screen_height, start_button, s
 
     clear_json_file("data.json")
 
+    # Create a threading.Event to signal threads to stop when the time expires
+    stop_event = threading.Event()
+
+    # Create a threading.Lock to synchronize access to the stop event
+    stop_event_lock = threading.Lock()
+
     # Set the start date and time
     parameters.start_timeframe
 
@@ -108,14 +114,15 @@ def startSimulation(canvas, window, screen_width, screen_height, start_button, s
     end_time = time.time() + 60  # 1 minute
     # Set the ratio of real-time to simulated time (adjust as needed)
     real_to_sim_time_ratio = 10 * 6  # 10 minutes of real-time corresponds to 10 hours of simulated time
+
     # Create a label for the timer
     timer_label = tk.Label(window, text="Current Time: 00:00:00", font=("Helvetica", 14))
     timer_label.pack(side=tk.RIGHT, anchor=tk.SE, padx=10, pady=10)
     timer_label.place(x=screen_width - 280, y=screen_height - 75)
 
     elapsed_time = 0
-    # Generate flying objects randomly for 3 minutes
-    end_time = time.time() + parameters.simulation_duration  # 1 minute
+
+    end_time = time.time() + (parameters.simulation_duration / 60) # convert hours to minutes
 
     # Set the number of threads to be created within a minute
     threads_to_create = parameters.numbers_of_objects
@@ -131,9 +138,9 @@ def startSimulation(canvas, window, screen_width, screen_height, start_button, s
         current_simulation_time = get_simulation_time(parameters.simulation_start_time, elapsed_time)
 
         # Randomly decide whether to create a thread or not
-        if threads_created < threads_to_create and random.choice([True, False, False]):
+        if threads_created < threads_to_create and random.choice([True, True, False, False, False, False]):
             # Create a thread for each FlyingObject
-            thread = threading.Thread(target=run_flying_object, args=(window, canvas, parameters, screen_width, screen_height))
+            thread = threading.Thread(target=run_flying_object, args=(window, canvas, parameters, screen_width, screen_height, threads_created))
             threads.append(thread)
 
             # Start the thread
@@ -151,6 +158,10 @@ def startSimulation(canvas, window, screen_width, screen_height, start_button, s
 
         # Sleep for a short duration to control the rate of object creation
         time.sleep(1)
+
+    # Acquire the lock before setting the stop event
+    with stop_event_lock:
+        stop_event.set()
 
     # Clear the list of threads
     threads.clear()

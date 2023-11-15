@@ -3,7 +3,8 @@ from start_simulation import startSimulation
 import threading
 from utils import SimulationParameters
 from open_settings import openSettings
-
+from rest_api import run_flask_app
+from multiprocessing import Process
 
 # Create the main window
 window = tk.Tk()
@@ -42,7 +43,23 @@ canvas.create_window(5, 70, anchor=tk.NW, window=settings_button, width=110, hei
 # Place the "Start simulation" button at the upper left corner
 canvas.create_window(5, 10, anchor=tk.NW, window=start_button, width=110, height=50)
 
+# Function to run the Tkinter main event loop
+def run_mainloop():
+    window.mainloop()
 
+if __name__ == '__main__':
+    # Start the Flask app in a separate process
+    flask_process = Process(target=run_flask_app)
+    flask_process.start()
 
-# Start the main event loop
-window.mainloop()
+    # Run the Tkinter main event loop in the main thread
+    run_mainloop()
+
+    try:
+        # Run the Tkinter main event loop in the main thread
+        run_mainloop()
+    finally:
+        # Stop the Flask app gracefully when the Tkinter main event loop exits
+        flask_process.terminate()
+        flask_process.join()
+

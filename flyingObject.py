@@ -17,7 +17,6 @@ class FlyingObject:
         self.file_access_lock = threading.Lock()
         self.x = x
         self.y = y
-
         self.angle = None
         self.speed = speed
 
@@ -53,12 +52,12 @@ class FlyingObject:
             "x": round(self.x, 2),
             "y": round(self.y, 2),
             "angle": round(self.angle, 2) if self.angle is not None else None,
-            "current_time": self.time_frame.get_current_time().strftime("%Y-%m-%d %H:%M:%S"),
+            "current_time": self.time_frame.get_current_time().strftime("%Y-%m-%dT%H:%M:%S"),
             "sector": determine_sector(self.x, self.y)
         }
         return data
 
-    def _write_to_json(self, data):
+    def _write_to_json(self, data, counter_json, bezier_curve):
         # Acquire the lock before performing file access
         with self.file_access_lock:
             try:
@@ -69,13 +68,21 @@ class FlyingObject:
                 print(f"Error reading existing data file: {e}")
                 existing_data = {}
 
-            if self.object_id not in existing_data:
-                existing_data[self.object_id] = []
+            if "Flying_Object" + str(counter_json) not in existing_data:
+                existing_data["Flying_Object" + str(counter_json)] \
+                    = {"object_id": self.object_id,
+                       "initial_time": self.created_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                       "end_time": self.time_frame.get_current_time().strftime("%Y-%m-%dT%H:%M:%S"),
+                       "payload": self.payload,  # Convert bytes to string for JSON serialization
+                       "expire_time": self.expire_time,
+                       "speed_(m/s)": self.speed,
+                       "data": []}
 
-            existing_data[self.object_id].extend(data)
+            existing_data["Flying_Object" + str(counter_json)]["data"].extend(data)
 
             with open("data.json", "w") as file:
                 json.dump(existing_data, file, indent=2)
+
 
     def _set_expire_time(self, dest_x, dest_y):
         # Calculate the distance between the current position and the destination
@@ -86,17 +93,18 @@ class FlyingObject:
 
         self.expire_time = real_time_duration / 3600  # expire time in minutes
 
-    def move(self, dest_x, dest_y, bezier_curve):
+    def move(self, dest_x, dest_y, bezier_curve, counter_json):
 
         # Calculate the distance between the current position and the destination
         distance_to_destination = math.sqrt((self.x - dest_x) ** 2 + (self.y - dest_y) ** 2)
 
-        # Calculate the time it would take to cover the distance in real time
+        # Calculate the time it would take to cover the distance at the specified speed
         real_time_duration = distance_to_destination / (self.speed / 1000)  # Convert speed to km/s
 
-        self.expire_time = real_time_duration / 3600  # expire time in minutes
+        self.expire_time = real_time_duration / 60  # Expire time in minutes
+
         # Determine the number of steps needed to cover the distance in real time
-        steps = int((real_time_duration/3600) / 0.02)  # Assuming a step size of 0.02 seconds
+        steps = int((real_time_duration / 60) / 0.15)  # Assuming a step size of 0.02 seconds
         # # Calculate the step size based on the number of steps
         t_step = 1 / steps
         t = 0
@@ -122,12 +130,4 @@ class FlyingObject:
             # Sleep for a short duration to control the rate of object movement
             time.sleep(0.15)
 
-        # Add additional data to the end of the JSON file
-        data.append({
-            "initial_time": self.created_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "current_time": self.time_frame.get_current_time().strftime("%Y-%m-%d %H:%M:%S"),
-            "payload": self.payload,  # Convert bytes to string for JSON serialization
-            "expire time": self.expire_time
-        })
-
-        self._write_to_json(data)
+        self._write_to_json(data, counter_json, bezier_curve)

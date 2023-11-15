@@ -33,7 +33,7 @@ def calculate_distance(x1, y1, x2, y2):
 class SimulationParameters:
     def __init__(self):
         self.simulation_start_time = datetime.datetime(2006, 12, 1, 13, 0)
-        self.simulation_duration = 600  # 10 minutes
+        self.simulation_duration = 3600  # 1 minutes
         self.numbers_of_objects = 40  # 40 objects during simulation
         self.current_time = self.simulation_start_time
         self.stop_event = threading.Event()
